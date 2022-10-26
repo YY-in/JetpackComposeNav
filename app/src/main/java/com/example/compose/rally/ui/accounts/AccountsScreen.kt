@@ -62,8 +62,10 @@ fun AccountsScreen(
  */
 @Composable
 fun SingleAccountScreen(
+    // 默认传递列表的第一个对象
     accountType: String? = UserData.accounts.first().name
 ) {
+    // 利用传递的accountType进行匹配，查找到需要的account
     val account = remember(accountType) { UserData.getAccount(accountType) }
     StatementBody(
         items = listOf(account),

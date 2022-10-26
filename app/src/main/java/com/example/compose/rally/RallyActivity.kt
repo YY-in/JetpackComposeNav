@@ -28,13 +28,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.example.compose.rally.ui.accounts.AccountsScreen
+import com.example.compose.rally.ui.accounts.SingleAccountScreen
+import com.example.compose.rally.ui.bills.BillsScreen
 import com.example.compose.rally.ui.components.RallyTabRow
+import com.example.compose.rally.ui.overview.OverviewScreen
 import com.example.compose.rally.ui.theme.RallyTheme
 
 /**
@@ -76,14 +83,16 @@ fun RallyApp() {
                 RallyTabRow(
                     allScreens = rallyTabRowScreens,
                     onTabSelected = { newScreen ->
-                        navController.navigateSingleTopTo(newScreen.route) },
+                        navController.navigateSingleTopTo(newScreen.route)
+                    },
                     /**
                      * 如前所述，每个目的地都有一条唯一的路线，因此我们可以使用此 String 路线作为类似的 ID，
                      * 以进行严格的对比并找到唯一匹配。
                      * 如需更新 currentScreen，您需要迭代 rallyTabRowScreens 列表，
                      * 以找到匹配路线，然后返回对应的 RallyDestination。Kotlin 为此提供了一个便捷的 .find() 函数：
                      */
-                    currentScreen = rallyTabRowScreens.find{ it.route == currentDestination?.route } ?: Overview
+                    currentScreen = rallyTabRowScreens.find { it.route == currentDestination?.route }
+                        ?: Overview
                 )
             }
         ) { innerPadding ->
@@ -91,39 +100,90 @@ fun RallyApp() {
 //            Box(Modifier.padding(innerPadding)) {
 //                currentScreen.screen()
 //            }
-            /**
-             * NavHost 充当容器，负责显示导航图的当前目的地
-             * 当您在可组合项之间进行导航时，NavHost 的内容会自动进行重组。
-             * 此外，它还会将 NavController 与导航图 (NavGraph) 相关联，后者用于标出能够在其间进行导航的可组合目的地。
-             * 它实际上是一系列可提取的目的地。
-             */
-            NavHost(
+            RallyNavHost(
                 navController = navController,
-                startDestination = Overview.route,
                 modifier = Modifier.padding(innerPadding)
-            ){
-                /**
-                 * 最后一个形参 builder: NavGraphBuilder.() -> Unit 负责定义和构建导航图。
-                 * 该形参使用的是 Navigation Kotlin DSL 中的 lambda 语法，因此可作为函数正文内部的尾随 lambda 传递并从括号中取出
-                 */
-                // builder parameter will be defined here as the graph
-                /**
-                 * builder 形参要求使用函数，因此 Navigation Compose 提供了 NavGraphBuilder.composable 扩展函数，
-                 * 以便轻松将各个可组合目的地添加到导航图中，并定义必要的导航信息。
-                 *
-                 * 第一个目的地是 Overview，因此您需要通过 composable 扩展函数添加它，并为其设置唯一字符串 route。
-                 * 此操作只会将目的地添加到导航图中，因此您还需要定义导航到此目的地时要显示的实际界面
-                 */
-                composable(route = Overview.route) {
-                    Overview.screen()
+            )
+
+        }
+
+    }
+}
+
+@Composable
+fun RallyNavHost(
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
+    /**
+     * NavHost 充当容器，负责显示导航图的当前目的地
+     * 当您在可组合项之间进行导航时，NavHost 的内容会自动进行重组。
+     * 此外，它还会将 NavController 与导航图 (NavGraph) 相关联，后者用于标出能够在其间进行导航的可组合目的地。
+     * 它实际上是一系列可提取的目的地。
+     */
+    NavHost(
+        navController = navController as NavHostController,
+        startDestination = Overview.route,
+        modifier = modifier
+    ) {
+        /**
+         * 最后一个形参 builder: NavGraphBuilder.() -> Unit 负责定义和构建导航图。
+         * 该形参使用的是 Navigation Kotlin DSL 中的 lambda 语法，因此可作为函数正文内部的尾随 lambda 传递并从括号中取出
+         */
+        // builder parameter will be defined here as the graph
+        /**
+         * builder 形参要求使用函数，因此 Navigation Compose 提供了 NavGraphBuilder.composable 扩展函数，
+         * 以便轻松将各个可组合目的地添加到导航图中，并定义必要的导航信息。
+         *
+         * 第一个目的地是 Overview，因此您需要通过 composable 扩展函数添加它，并为其设置唯一字符串 route。
+         * 此操作只会将目的地添加到导航图中，因此您还需要定义导航到此目的地时要显示的实际界面
+         */
+        composable(route = Overview.route) {
+            OverviewScreen(
+                onClickSeeAllAccounts = {
+                    navController.navigateSingleTopTo(Accounts.route)
+                },
+                onClickSeeAllBills = {
+                    navController.navigateSingleTopTo(Bills.route)
+                },
+                onAccountClick = { accountType ->
+                    navController.navigateToSingleAccount(accountType)
                 }
-                composable(route = Accounts.route) {
-                    Accounts.screen()
+            )
+        }
+        composable(route = Accounts.route) {
+            AccountsScreen(
+                onAccountClick = { accountType ->
+                    navController.navigateToSingleAccount(accountType)
                 }
-                composable(route = Bills.route) {
-                    Bills.screen()
-                }
-            }
+            )
+        }
+        composable(route = Bills.route) {
+            BillsScreen()
+        }
+        composable(
+            /**
+             * 第二步是让此 composable 知道它应该接受实参。
+             * 为此，您可以定义其 arguments 形参。您可以根据需要定义任意数量的实参，
+             * 因为 composable 函数默认接受实参列表。在本示例中，您只需添加一个名为 accountTypeArg 的实参，并将其类型指定为 String，
+             * 即可提高安全性。如果您未明确设置类型，系统将根据此实参的默认值推断出其类型：
+             */
+            route = SingleAccount.routeWithArgs,
+            arguments = SingleAccount.arguments,
+            deepLinks = SingleAccount.deepLinks
+        ) {
+            /**
+             * 获取当前的argument列表
+             */
+            val accountType =
+                it.arguments?.getString(SingleAccount.accountTypeArg)
+            // 传递当前的argument列表,如果没有accountType自动调用
+            SingleAccountScreen(accountType)
+            /**
+             * 您的 SingleAccountScreen 现已获得必要信息，可在您导航到账户类型时显示正确的账户类型。
+             * 如果您查看 SingleAccountScreen的实现，
+             * 就会发现它已经将传递的 accountType 与 UserData 源进行匹配，以获取相应的账户详细信息。
+             */
         }
     }
 }
@@ -143,3 +203,7 @@ fun NavHostController.navigateSingleTopTo(route: String) =
         launchSingleTop = true
         restoreState =true
     }
+
+private fun NavHostController.navigateToSingleAccount(accountType: String) {
+    this.navigateSingleTopTo("${SingleAccount.route}/$accountType")
+}

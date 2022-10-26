@@ -42,17 +42,18 @@ data class Bill(
  */
 object UserData {
     val accounts: List<Account> = listOf(
-        Account(
-            "Checking",
-            1234,
-            2215.13f,
-            Color(0xFF004940)
-        ),
+
         Account(
             "Home Savings",
             5678,
             8676.88f,
             Color(0xFF005D57)
+        ),
+        Account(
+            "Checking",
+            1234,
+            2215.13f,
+            Color(0xFF004940)
         ),
         Account(
             "Car Savings",
